@@ -54,7 +54,7 @@ jobs:
       # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
       - name: Patch CMakeLists.txt (RIME only)
         working-directory: fcitx5-plugins
-        #if: false   # 这个 step 永远不会执行
+        if: false   # 这个 step 永远不会执行
         run: |
           sed -i '' \
             -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
@@ -159,12 +159,37 @@ jobs:
       - name: Package build
         working-directory: fcitx5-plugins/build
         run: |
-          tar czf fcitx5-plugins-rime-macos-arm64.tar.gz *
-          ls -lh fcitx5-plugins-rime-macos-arm64.tar.gz
+          macos-arm64/*-arm64.tar.bz2
+          macos-arm64/*-any.tar.bz2
 
       # 7️⃣ 上传 artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: fcitx5-plugins-rime-macos-arm64
-          path: fcitx5-plugins/build/fcitx5-plugins-rime-macos-arm64.tar.gz
+          path: |
+            macos-${{ matrix.arch }}/*-arm64.tar.bz2
+            macos-${{ matrix.arch }}/*-any.tar.bz2
+
+      - name: Check validity
+        working-directory: fcitx5-plugins
+        run: |
+          ./scripts/check-validity.sh
+          python scripts/check-shared-files.py build/macos-arm64/*/data/plugin/*.json
+
+      - name: Generate meta-arm64.json
+        working-directory: fcitx5-plugins
+        run: |
+          python scripts/generate-meta.py arm64
+
+      - name: Upload meta-arm64.json
+        uses: actions/upload-artifact@v4
+        with:
+          working-directory: fcitx5-plugins
+          name: artifact-macos-meta-arm64.json
+          path: |
+            meta-arm64.json
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
