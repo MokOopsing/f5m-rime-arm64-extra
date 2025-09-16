@@ -50,87 +50,6 @@ jobs:
           wget https://github.com/fcitx-contrib/fcitx5-macos/releases/download/latest/Fcitx5-arm64-dev.tar.bz2
           sudo tar xf Fcitx5-arm64-dev.tar.bz2 -C "/Library/Input Methods"
 
-
-      # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
-      - name: Patch CMakeLists.txt (RIME only)
-        working-directory: fcitx5-plugins
-        if: false   # 这个 step 永远不会执行
-        run: |
-          sed -i '' \
-            -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
-            -e 's/option(BAMBOO .* ON)/option(BAMBOO "" OFF)/' \
-            -e 's/option(CHEWING .* ON)/option(CHEWING "" OFF)/' \
-            -e 's/option(CHINESE_ADDONS .* ON)/option(CHINESE_ADDONS "" OFF)/' \
-            -e 's/option(HALLELUJAH .* ON)/option(HALLELUJAH "" OFF)/' \
-            -e 's/option(HANGUL .* ON)/option(HANGUL "" OFF)/' \
-            -e 's/option(M17N .* ON)/option(M17N "" OFF)/' \
-            -e 's/option(MOZC .* ON)/option(MOZC "" OFF)/' \
-            -e 's/option(SAYURA .* ON)/option(SAYURA "" OFF)/' \
-            -e 's/option(SKK .* ON)/option(SKK "" OFF)/' \
-            -e 's/option(TABLE_EXTRA .* ON)/option(TABLE_EXTRA "" OFF)/' \
-            -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
-            -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
-            CMakeLists.txt
-            #cat CMakeLists.txt
-            cat > scripts/install.sh <<'EOF'
-            #!/bin/bash
-            set -e
-        
-            macos=(
-              rime
-            )
-        
-            . scripts/platform.sh "$@"
-        
-            ROOT=`pwd`
-            CACHE_DIR=$ROOT/cache/$PLATFORM
-            TARGET_DIR=$ROOT/build/$TARGET
-
-            package() {
-              local plugin=$1
-              shift
-              local input_methods=("$@")
-              pushd $TARGET_DIR/$plugin/usr > /dev/null
-              python $ROOT/scripts/generate-descriptor.py "${input_methods[@]}"
-        
-              if [[ $PLATFORM == "macos" || $PLATFORM == "windows" ]]; then
-                # --no-xattrs fixes tar: Special header too large: %llu
-                tar cjf ../../$plugin$POSTFIX.tar.bz2 --no-xattrs *
-                cd ../data
-                tar cjf ../../$plugin-any.tar.bz2 --no-xattrs *
-              else
-                rm -f ../../$plugin$POSTFIX.zip # zip adds content to existing zip file.
-                zip -r ../../$plugin$POSTFIX.zip *
-              fi
-              popd > /dev/null
-            }
-        
-            # 只构建并 strip rime 插件
-            DESTDIR=$TARGET_DIR/rime cmake --install build/$TARGET/fcitx5-rime
-            rm -rf $TARGET_DIR/rime/usr/include
-            rm -rf $TARGET_DIR/rime/usr/lib/cmake
-            rm -rf $TARGET_DIR/rime/usr/share/metainfo
-            find $TARGET_DIR/rime/usr -name '*.so' -exec strip -x {} \;
-        
-            # 拷贝 rime 数据
-            rime_dir=$TARGET_DIR/rime/usr/share/rime-data
-            pushd $ROOT/fcitx5-rime-data > /dev/null
-            cp rime-prelude/*.yaml $rime_dir
-            cp rime-essay/essay.txt $rime_dir
-            cp rime-luna-pinyin/*.yaml $rime_dir
-            cp rime-stroke/*.yaml $rime_dir
-            cp default.yaml $rime_dir
-            popd > /dev/null
-            cp -r $TARGET_DIR/usr/share/opencc $rime_dir
-        
-            # 打包 rime
-            package rime rime
-            EOF
-
-            echo "check install.sh start"
-            cat scripts/install.sh
-            echo "check install.sh end"
-
       # 4️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp
         working-directory: fcitx5-plugins
@@ -160,6 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fcitx5-plugins-rime-macos-arm64
+          working-directory: fcitx5-plugins
           path: |
             macos-arm64/*-arm64.tar.bz2
             macos-arm64/*-any.tar.bz2
