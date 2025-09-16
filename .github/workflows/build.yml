@@ -59,6 +59,7 @@ jobs:
             -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
             -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
             CMakeLists.txt
+            cat CMakeLists.txt
 
       # 4️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp
@@ -66,6 +67,7 @@ jobs:
         run: |
           sed -i '' '/if (context.menu.num_candidates) {/c\
           if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' fcitx5-rime/src/rimestate.cpp
+          cat fcitx5-rime/src/rimestate.cpp
 
       # 5️⃣ 编译
       - name: Configure & Build
