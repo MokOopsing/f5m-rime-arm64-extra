@@ -82,6 +82,8 @@ jobs:
             sed -i '' '/^[[:space:]]*extract_dep chinese-addons opencc$/c\
             echo "placeholder"
             ' scripts/install.sh
+            sed -i '' '/^extract_dep hangul libhangul$/s/^/# /' scripts/install.sh
+            sed -i '' '/^extract_dep m17n m17n-db$/s/^/# /' scripts/install.sh
             sed -i '' '/^package anthy anthy$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chewing chewing$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chinese-addons pinyin$/s/^/# /' scripts/install.sh
