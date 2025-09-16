@@ -1,0 +1,75 @@
+name: macOS Build (RIME only, arm64)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      # 1️⃣ 拉取 fcitx5-plugins 仓库，递归子模块
+      - name: Checkout fcitx5-plugins
+        uses: actions/checkout@v5
+        with:
+          repository: fcitx-contrib/fcitx5-plugins
+          path: fcitx5-plugins
+          submodules: recursive
+
+      # 2️⃣ 安装依赖
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake ninja gettext pkg-config boost qt@5 libxcb
+
+      # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
+      - name: Patch CMakeLists.txt (RIME only)
+        working-directory: fcitx5-plugins
+        run: |
+          sed -i '' \
+            -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
+            -e 's/option(BAMBOO .* ON)/option(BAMBOO "" OFF)/' \
+            -e 's/option(CHEWING .* ON)/option(CHEWING "" OFF)/' \
+            -e 's/option(CHINESE_ADDONS .* ON)/option(CHINESE_ADDONS "" OFF)/' \
+            -e 's/option(HALLELUJAH .* ON)/option(HALLELUJAH "" OFF)/' \
+            -e 's/option(HANGUL .* ON)/option(HANGUL "" OFF)/' \
+            -e 's/option(M17N .* ON)/option(M17N "" OFF)/' \
+            -e 's/option(MOZC .* ON)/option(MOZC "" OFF)/' \
+            -e 's/option(SAYURA .* ON)/option(SAYURA "" OFF)/' \
+            -e 's/option(SKK .* ON)/option(SKK "" OFF)/' \
+            -e 's/option(TABLE_EXTRA .* ON)/option(TABLE_EXTRA "" OFF)/' \
+            -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
+            -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
+            CMakeLists.txt
+
+      # 4️⃣ 修改 rimestate.cpp
+      - name: Patch rimestate.cpp
+        working-directory: fcitx5-plugins
+        run: |
+          sed -i '' 's/if (context.menu.num_candidates) {/if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {/' fcitx5-rime/src/rimestate.cpp
+
+      # 5️⃣ 编译
+      - name: Configure & Build
+        working-directory: fcitx5-plugins
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          ninja -j$(sysctl -n hw.ncpu)
+
+      # 6️⃣ 打包产物
+      - name: Package build
+        working-directory: fcitx5-plugins/build
+        run: |
+          tar czf fcitx5-plugins-rime-macos-arm64.tar.gz *
+          ls -lh fcitx5-plugins-rime-macos-arm64.tar.gz
+
+      # 7️⃣ 上传 artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fcitx5-plugins-rime-macos-arm64
+          path: fcitx5-plugins/build/fcitx5-plugins-rime-macos-arm64.tar.gz
