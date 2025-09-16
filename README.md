@@ -1,0 +1,1 @@
+# fcitx5macos-rime-mod
