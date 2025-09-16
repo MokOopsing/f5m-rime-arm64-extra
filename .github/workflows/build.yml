@@ -72,32 +72,60 @@ jobs:
             -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
             CMakeLists.txt
             #cat CMakeLists.txt
-            sed -i '' '/^macos=(/,/)/c\
-            macos=(\
-              rime\
+            cat > scripts/install.sh <<'EOF'
+            #!/bin/bash
+            set -e
+        
+            macos=(
+              rime
             )
-            ' scripts/install.sh
-            sed -i '' '/^extract_dep anthy anthy-cmake$/s/^/# /' scripts/install.sh
-            sed -i '' '/^extract_dep chewing libchewing$/s/^/# /' scripts/install.sh
-            sed -i '' '/^[[:space:]]*extract_dep chinese-addons opencc$/c\
-            echo "placeholder"
-            ' scripts/install.sh
-            sed -i '' '/^extract_dep hangul libhangul$/s/^/# /' scripts/install.sh
-            sed -i '' '/^extract_dep m17n m17n-db$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package anthy anthy$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package chewing chewing$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package chinese-addons pinyin$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package hangul hangul$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package lua$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package m17n$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package mozc mozc$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package hallelujah hallelujah$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package sayura sayura$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package thai libthai$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package unikey unikey$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package bamboo bamboo$/s/^/# /' scripts/install.sh
-            sed -i '' '/^  package bamboo bamboo$/s/^/# /' scripts/install.sh
-            sed -i '' '/^  package skk skk$/s/^/# /' scripts/install.sh
+        
+            . scripts/platform.sh "$@"
+        
+            ROOT=`pwd`
+            CACHE_DIR=$ROOT/cache/$PLATFORM
+            TARGET_DIR=$ROOT/build/$TARGET
+
+            package() {
+              local plugin=$1
+              shift
+              local input_methods=("$@")
+              pushd $TARGET_DIR/$plugin/usr > /dev/null
+              python $ROOT/scripts/generate-descriptor.py "${input_methods[@]}"
+        
+              if [[ $PLATFORM == "macos" || $PLATFORM == "windows" ]]; then
+                # --no-xattrs fixes tar: Special header too large: %llu
+                tar cjf ../../$plugin$POSTFIX.tar.bz2 --no-xattrs *
+                cd ../data
+                tar cjf ../../$plugin-any.tar.bz2 --no-xattrs *
+              else
+                rm -f ../../$plugin$POSTFIX.zip # zip adds content to existing zip file.
+                zip -r ../../$plugin$POSTFIX.zip *
+              fi
+              popd > /dev/null
+            }
+        
+            # 只构建并 strip rime 插件
+            DESTDIR=$TARGET_DIR/rime cmake --install build/$TARGET/fcitx5-rime
+            rm -rf $TARGET_DIR/rime/usr/include
+            rm -rf $TARGET_DIR/rime/usr/lib/cmake
+            rm -rf $TARGET_DIR/rime/usr/share/metainfo
+            find $TARGET_DIR/rime/usr -name '*.so' -exec strip -x {} \;
+        
+            # 拷贝 rime 数据
+            rime_dir=$TARGET_DIR/rime/usr/share/rime-data
+            pushd $ROOT/fcitx5-rime-data > /dev/null
+            cp rime-prelude/*.yaml $rime_dir
+            cp rime-essay/essay.txt $rime_dir
+            cp rime-luna-pinyin/*.yaml $rime_dir
+            cp rime-stroke/*.yaml $rime_dir
+            cp default.yaml $rime_dir
+            popd > /dev/null
+            cp -r $TARGET_DIR/usr/share/opencc $rime_dir
+        
+            # 打包 rime
+            package rime rime
+            EOF
             echo "check install.sh start"
             cat scripts/install.sh
             echo "check install.sh end"
