@@ -77,6 +77,8 @@ jobs:
               rime\
             )
             ' scripts/install.sh
+            sed -i '' '/^extract_dep anthy anthy-cmake$/s/^/# /' scripts/install.sh
+            sed -i '' '/^extract_dep chewing libchewing$/s/^/# /' scripts/install.sh
             sed -i '' '/^package anthy anthy$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chewing chewing$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chinese-addons pinyin$/s/^/# /' scripts/install.sh
@@ -89,7 +91,8 @@ jobs:
             sed -i '' '/^package thai libthai$/s/^/# /' scripts/install.sh
             sed -i '' '/^package unikey unikey$/s/^/# /' scripts/install.sh
             sed -i '' '/^package bamboo bamboo$/s/^/# /' scripts/install.sh
-            sed -i '' '/^package skk skk$/s/^/# /' scripts/install.sh
+            sed -i '' '/^  package bamboo bamboo$/s/^/# /' scripts/install.sh
+            sed -i '' '/^  package skk skk$/s/^/# /' scripts/install.sh
             echo "check install.sh start"
             cat scripts/install.sh
             echo "check install.sh end"
