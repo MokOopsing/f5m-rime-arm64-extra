@@ -182,7 +182,3 @@ jobs:
           name: artifact-macos-meta-arm64.json
           path: |
             meta-arm64.json
-
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
