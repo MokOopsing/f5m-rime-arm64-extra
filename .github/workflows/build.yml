@@ -90,6 +90,9 @@ jobs:
             sed -i '' '/^package unikey unikey$/s/^/# /' scripts/install.sh
             sed -i '' '/^package bamboo bamboo$/s/^/# /' scripts/install.sh
             sed -i '' '/^package skk skk$/s/^/# /' scripts/install.sh
+            echo "check install.sh start"
+            cat scripts/install.sh
+            echo "check install.sh end"
 
       # 4️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp
