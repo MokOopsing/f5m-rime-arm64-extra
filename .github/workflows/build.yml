@@ -23,7 +23,7 @@ jobs:
         with:
           submodules: recursive
           repository: google/mozc
-          path: fcitx-contrib/fcitx5-plugins/fcitx5-mozc/mozc
+          path: fcitx5-plugins/fcitx5-mozc/mozc
           ref: ce1fb7fe48efb1d85f8e54eff1b05e9e692bf0d4
 
       - uses: actions/setup-python@v6
