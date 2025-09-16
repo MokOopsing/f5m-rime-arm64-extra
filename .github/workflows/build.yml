@@ -64,8 +64,8 @@ jobs:
       - name: Patch rimestate.cpp
         working-directory: fcitx5-plugins
         run: |
-          sed -i '' '/if (context.menu.num_candidates) {/c\if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' src/rimestate.cpp
-
+          sed -i '' '/if (context.menu.num_candidates) {/c\
+          if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' src/rimestate.cpp
 
       # 5️⃣ 编译
       - name: Configure & Build
