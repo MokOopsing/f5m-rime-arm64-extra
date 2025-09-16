@@ -78,6 +78,7 @@ jobs:
           git apply --directory=fcitx5-rime patches/rime.log.patch
           cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
           cmake --build build/macos-arm64
+          pwd
           ./scripts/install.sh macos arm64
 
       # 6️⃣ 打包产物
