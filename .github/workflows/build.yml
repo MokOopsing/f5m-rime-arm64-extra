@@ -73,6 +73,8 @@ jobs:
           cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
           cmake --build build/macos-arm64
           ./scripts/install.sh macos arm64
+          ls -l ./
+          ls -l ./build/
 
       # 7️⃣ 上传 artifact
       - name: Upload artifact
