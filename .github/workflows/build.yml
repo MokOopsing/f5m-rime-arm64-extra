@@ -83,8 +83,7 @@ jobs:
         with:
           name: fcitx5-plugins-rime-macos-arm64
           path: |
-            fcitx5-plugins/build/macos-arm64/*-arm64.tar.bz2
-            fcitx5-plugins/build/macos-arm64/*-any.tar.bz2
+            fcitx5-plugins/build/macos-arm64/*rime*.tar.bz2
 
       - name: Check validity
         working-directory: fcitx5-plugins
@@ -103,4 +102,4 @@ jobs:
           working-directory: fcitx5-plugins
           name: artifact-macos-meta-arm64.json
           path: |
-            meta-arm64.json
+            fcitx5-plugins/meta-arm64.json
