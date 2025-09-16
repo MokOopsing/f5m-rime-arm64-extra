@@ -79,7 +79,9 @@ jobs:
             ' scripts/install.sh
             sed -i '' '/^extract_dep anthy anthy-cmake$/s/^/# /' scripts/install.sh
             sed -i '' '/^extract_dep chewing libchewing$/s/^/# /' scripts/install.sh
-            sed -i '' '/^  extract_dep chinese-addons opencc$/s/^/# /' scripts/install.sh
+            sed -i '' '/^[[:space:]]*extract_dep chinese-addons opencc$/c\
+            echo "placeholder"
+            ' scripts/install.sh
             sed -i '' '/^package anthy anthy$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chewing chewing$/s/^/# /' scripts/install.sh
             sed -i '' '/^package chinese-addons pinyin$/s/^/# /' scripts/install.sh
