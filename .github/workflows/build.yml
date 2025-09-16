@@ -81,8 +81,8 @@ jobs:
           name: fcitx5-plugins-rime-macos-arm64
           working-directory: fcitx5-plugins
           path: |
-            macos-arm64/*-arm64.tar.bz2
-            macos-arm64/*-any.tar.bz2
+            build/macos-arm64/*-arm64.tar.bz2
+            build/macos-arm64/*-any.tar.bz2
 
       - name: Check validity
         working-directory: fcitx5-plugins
