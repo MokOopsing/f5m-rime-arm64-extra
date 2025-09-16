@@ -82,10 +82,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fcitx5-plugins-rime-macos-arm64
-          working-directory: fcitx5-plugins
           path: |
-            build/macos-arm64/*-arm64.tar.bz2
-            build/macos-arm64/*-any.tar.bz2
+            fcitx5-plugins/build/macos-arm64/*-arm64.tar.bz2
+            fcitx5-plugins/build/macos-arm64/*-any.tar.bz2
 
       - name: Check validity
         working-directory: fcitx5-plugins
