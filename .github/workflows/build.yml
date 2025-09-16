@@ -126,6 +126,7 @@ jobs:
             # 打包 rime
             package rime rime
             EOF
+
             echo "check install.sh start"
             cat scripts/install.sh
             echo "check install.sh end"
