@@ -65,7 +65,7 @@ jobs:
         working-directory: fcitx5-plugins
         run: |
           sed -i '' '/if (context.menu.num_candidates) {/c\
-          if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' src/rimestate.cpp
+          if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' fcitx5-rime/src/rimestate.cpp
 
       # 5️⃣ 编译
       - name: Configure & Build
