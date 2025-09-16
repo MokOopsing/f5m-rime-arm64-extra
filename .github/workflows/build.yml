@@ -77,6 +77,19 @@ jobs:
               rime\
             )
             ' scripts/install.sh
+            sed -i '' '/^package anthy anthy$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package chewing chewing$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package chinese-addons pinyin$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package hangul hangul$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package lua$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package m17n$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package mozc mozc$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package hallelujah hallelujah$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package sayura sayura$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package thai libthai$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package unikey unikey$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package bamboo bamboo$/s/^/# /' scripts/install.sh
+            sed -i '' '/^package skk skk$/s/^/# /' scripts/install.sh
 
       # 4️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp
