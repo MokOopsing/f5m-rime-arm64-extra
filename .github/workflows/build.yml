@@ -1,0 +1,158 @@
+name: macOS Build (RIME only, arm64)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "*" ]
+  schedule:
+    - cron: '0 23 * * *'
+    - cron: '0 4 * * *'
+
+jobs:
+  clean-release-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all .so assets in 'latest' release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          repo="${{ github.repository }}"
+          api="https://api.github.com/repos/$repo"
+          release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$api/releases/tags/latest" | jq -r .id)
+
+          if [ "$release_id" = "null" ]; then
+            echo "Release 'latest' not found. Skipping."
+            exit 0
+          fi
+
+          curl -s -H "Authorization: token $GITHUB_TOKEN" "$api/releases/$release_id/assets" \
+          | jq -r '.[] | select(.name | endswith(".so")) | .id' \
+          | xargs -r -I{} curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" "$api/releases/assets/{}"
+
+  build:
+    needs: clean-release-assets
+    runs-on: macos-latest
+
+    steps:
+      # 1️⃣ 拉取 fcitx5-plugins 仓库，递归子模块
+      - name: Checkout fcitx5-plugins
+        uses: actions/checkout@v5
+        with:
+          repository: fcitx-contrib/fcitx5-plugins
+          path: fcitx5-plugins
+          submodules: recursive
+
+      - name: Get fcitx5-plugins commit id
+        id: get-commit
+        working-directory: fcitx5-plugins
+        run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          repository: google/mozc
+          path: fcitx5-plugins/fcitx5-mozc/mozc
+          ref: ce1fb7fe48efb1d85f8e54eff1b05e9e692bf0d4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      # 2️⃣ 安装依赖
+      - name: Install dependencies
+        working-directory: fcitx5-plugins
+        env:
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+        run: |
+          brew update # always use latest go as github actions image may be inconsistent between runs.
+          brew install \
+            extra-cmake-modules \
+            ninja \
+            go
+          ./scripts/install-deps.sh macos arm64
+          sudo tar xf cache/macos/marisa-arm64.tar.bz2 -C /usr/local bin/marisa-build # Make use of Rosetta
+          pip install dirhash
+
+      - name: Install Fcitx5 dev package
+        run: |
+          wget https://github.com/fcitx-contrib/fcitx5-macos/releases/download/latest/Fcitx5-arm64-dev.tar.bz2
+          sudo tar xf Fcitx5-arm64-dev.tar.bz2 -C "/Library/Input Methods"
+
+      # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
+      - name: Patch CMakeLists.txt (RIME only)
+        working-directory: fcitx5-plugins
+        #if: false   # 这个 step 永远不会执行
+        run: |
+          sed -i '' \
+            -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
+            -e 's/option(BAMBOO .* ON)/option(BAMBOO "" OFF)/' \
+            -e 's/option(CHEWING .* ON)/option(CHEWING "" OFF)/' \
+            -e 's/option(CHINESE_ADDONS .* ON)/option(CHINESE_ADDONS "" OFF)/' \
+            -e 's/option(HALLELUJAH .* ON)/option(HALLELUJAH "" OFF)/' \
+            -e 's/option(HANGUL .* ON)/option(HANGUL "" OFF)/' \
+            -e 's/option(M17N .* ON)/option(M17N "" OFF)/' \
+            -e 's/option(MOZC .* ON)/option(MOZC "" OFF)/' \
+            -e 's/option(SAYURA .* ON)/option(SAYURA "" OFF)/' \
+            -e 's/option(SKK .* ON)/option(SKK "" OFF)/' \
+            -e 's/option(TABLE_EXTRA .* ON)/option(TABLE_EXTRA "" OFF)/' \
+            -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
+            -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
+            CMakeLists.txt
+
+      # 4️⃣ 修改 rimestate.cpp
+      - name: Patch rimestate.cpp
+        working-directory: fcitx5-plugins
+        run: |
+          sed -i '' '/if (context.menu.num_candidates) {/c\
+          if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' fcitx5-rime/src/rimestate.cpp
+          echo "cat fcitx5-rime/src/rimestate.cpp start"
+          echo ""
+          cat fcitx5-rime/src/rimestate.cpp
+          echo ""
+          echo "cat fcitx5-rime/src/rimestate.cpp end"
+
+      # 5️⃣ 编译
+      - name: Configure & Build
+        working-directory: fcitx5-plugins
+        env:
+          CGO_ENABLED: 1
+          CGO_CFLAGS: -mmacosx-version-min=13.3
+          GOFLAGS: -ldflags=-buildid=
+          GOARCH: arm64
+        run: |
+          ls -l patches
+          git apply --directory=libime patches/libime.patch
+          git apply --directory=fcitx5-rime patches/rime.log.patch
+          cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build/macos-arm64
+          #./scripts/install.sh macos arm64
+          ls -l ./
+          ls -l ./build/
+          ls -l ./build/macos-arm64/
+          find . -name "librime.so" | xargs ls -l
+          find . -name 'librime.so' -exec strip -x {} \;
+
+      # 7️⃣ 上传 artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fcitx5-plugins-rime-macos-arm64-so
+          path: |
+            fcitx5-plugins/build/macos-arm64/bin/librime.so
+
+      # 8️⃣ 上传到 GitHub Release (tag: latest)
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "macOS RIME Build"
+          body: |
+            This artifact was automatically built by GitHub Actions
+            from commit ${{ steps.get-commit.outputs.commit_id }} of [fcitx-contrib/fcitx5-plugins](https://github.com/fcitx-contrib/fcitx5-plugins).
+
+            It also includes changes from [fcitx5-rime PR #113](https://github.com/fcitx/fcitx5-rime/pull/113).
+          files: |
+            fcitx5-plugins/build/macos-arm64/bin/librime.so
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
