@@ -21,6 +21,7 @@ jobs:
 
       # 2️⃣ 安装依赖
       - name: Install dependencies
+        working-directory: fcitx5-plugins
         env:
           HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
@@ -72,15 +73,14 @@ jobs:
           CGO_ENABLED: 1
           CGO_CFLAGS: -mmacosx-version-min=13.3
           GOFLAGS: -ldflags=-buildid=
-          GOARCH: ${{ matrix.goarch }}
+          GOARCH: arm64
         run: |
+          ls -l patches
           git apply --directory=libime patches/libime.patch
           git apply --directory=fcitx5-rime patches/rime.log.patch
           cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
           cmake --build build/macos-arm64
-          echo "==========mksprin=========="
-          echo "$(pwd)"
-          "$(pwd)"/./scripts/install.sh macos arm64
+          ./scripts/install.sh macos arm64
 
       # 6️⃣ 打包产物
       - name: Package build
