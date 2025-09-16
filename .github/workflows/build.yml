@@ -80,7 +80,7 @@ jobs:
           cmake --build build/macos-arm64
           echo "==========mksprin=========="
           echo "$(pwd)"
-          ./scripts/install.sh macos arm64
+          "$(pwd)"/./scripts/install.sh macos arm64
 
       # 6️⃣ 打包产物
       - name: Package build
