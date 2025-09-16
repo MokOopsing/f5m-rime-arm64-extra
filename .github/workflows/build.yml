@@ -54,7 +54,7 @@ jobs:
       # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
       - name: Patch CMakeLists.txt (RIME only)
         working-directory: fcitx5-plugins
-        if: false   # 这个 step 永远不会执行
+        #if: false   # 这个 step 永远不会执行
         run: |
           sed -i '' \
             -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
@@ -71,7 +71,12 @@ jobs:
             -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
             -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
             CMakeLists.txt
-            cat CMakeLists.txt
+            #cat CMakeLists.txt
+            sed -i '' '/^macos=(/,/)/c\
+            macos=(\
+              rime\
+            )
+            ' scripts/install.sh
 
       # 4️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp
