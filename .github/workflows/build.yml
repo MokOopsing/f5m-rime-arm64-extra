@@ -168,8 +168,8 @@ jobs:
         with:
           name: fcitx5-plugins-rime-macos-arm64
           path: |
-            macos-${{ matrix.arch }}/*-arm64.tar.bz2
-            macos-${{ matrix.arch }}/*-any.tar.bz2
+            macos-arm64/*-arm64.tar.bz2
+            macos-arm64/*-any.tar.bz2
 
       - name: Check validity
         working-directory: fcitx5-plugins
