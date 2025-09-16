@@ -75,6 +75,7 @@ jobs:
           ./scripts/install.sh macos arm64
           ls -l ./
           ls -l ./build/
+          ls -l ./build/macos-arm64/
 
       # 7️⃣ 上传 artifact
       - name: Upload artifact
