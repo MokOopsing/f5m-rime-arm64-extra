@@ -9,7 +9,40 @@ on:
     - cron: '0 4 * * *'
 
 jobs:
+  check-latest-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      skip_build: ${{ steps.check.outputs.skip_build }}
+    steps:
+      - name: Check if build is needed
+        id: check
+        shell: bash
+        run: |
+          # 1️⃣ 获取 f5m-rime-arm64-extra latest release body
+          latest_body=$(curl -s https://api.github.com/repos/mokapsing/f5m-rime-arm64-extra/releases/latest | jq -r '.body')
+          latest_commit=$(echo "$latest_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
+
+          if [ -z "$latest_commit" ]; then
+            echo "No commit found in latest release body, continue build."
+          fi
+
+          # 2️⃣ 获取 fcitx5-plugins 最新 commit id
+          latest_fcitx5_plugins_commit=$(curl -s https://api.github.com/repos/fcitx-contrib/fcitx5-plugins/commits/master | jq -r '.sha')
+
+          echo "Latest release commit: $latest_commit"
+          echo "Latest fcitx5-plugins commit: $latest_fcitx5_plugins_commit"
+
+          # 3️⃣ 比对
+          if [ "$latest_commit" = "$latest_fcitx5_plugins_commit" ]; then
+            echo "Commit matches latest release, skipping build."
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
+
   clean-release-assets:
+    needs: check-latest-commit
+    if: needs.check-latest-commit.outputs.skip_build != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Delete all .so assets in 'latest' release
@@ -31,7 +64,8 @@ jobs:
           | xargs -r -I{} curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" "$api/releases/assets/{}"
 
   build:
-    needs: clean-release-assets
+    needs: [check-latest-commit, clean-release-assets]
+    if: needs.check-latest-commit.outputs.skip_build != 'true'
     runs-on: macos-latest
 
     steps:
@@ -43,23 +77,17 @@ jobs:
           path: fcitx5-plugins
           submodules: recursive
 
+      # 2️⃣ 获取当前最新commit id
       - name: Get fcitx5-plugins commit id
         id: get-commit
         working-directory: fcitx5-plugins
         run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-      - uses: actions/checkout@v5
-        with:
-          submodules: recursive
-          repository: google/mozc
-          path: fcitx5-plugins/fcitx5-mozc/mozc
-          ref: ce1fb7fe48efb1d85f8e54eff1b05e9e692bf0d4
-
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
-      # 2️⃣ 安装依赖
+      # 3️⃣ 安装依赖1
       - name: Install dependencies
         working-directory: fcitx5-plugins
         env:
@@ -74,12 +102,13 @@ jobs:
           sudo tar xf cache/macos/marisa-arm64.tar.bz2 -C /usr/local bin/marisa-build # Make use of Rosetta
           pip install dirhash
 
+      # 4️⃣ 安装依赖2（fcitx5 dev包）
       - name: Install Fcitx5 dev package
         run: |
           wget https://github.com/fcitx-contrib/fcitx5-macos/releases/download/latest/Fcitx5-arm64-dev.tar.bz2
           sudo tar xf Fcitx5-arm64-dev.tar.bz2 -C "/Library/Input Methods"
 
-      # 3️⃣ 修改 CMakeLists.txt，只启用 RIME
+      # 5️⃣ 修改 CMakeLists.txt，只启用 RIME
       - name: Patch CMakeLists.txt (RIME only)
         working-directory: fcitx5-plugins
         #if: false   # 这个 step 永远不会执行
@@ -100,19 +129,20 @@ jobs:
             -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
             CMakeLists.txt
 
-      # 4️⃣ 修改 rimestate.cpp
-      - name: Patch rimestate.cpp
+      # 6️⃣ 修改 rimestate.cpp
+      - name: Patch rimestate.cpp（https://github.com/fcitx/fcitx5-rime/pull/113）
         working-directory: fcitx5-plugins
         run: |
           sed -i '' '/if (context.menu.num_candidates) {/c\
-          if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {' fcitx5-rime/src/rimestate.cpp
+          \ \ \ \ \ \ \ \ if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {\
+          ' fcitx5-rime/src/rimestate.cpp
           echo "cat fcitx5-rime/src/rimestate.cpp start"
           echo ""
           cat fcitx5-rime/src/rimestate.cpp
           echo ""
           echo "cat fcitx5-rime/src/rimestate.cpp end"
 
-      # 5️⃣ 编译
+      # 7️⃣ 编译
       - name: Configure & Build
         working-directory: fcitx5-plugins
         env:
@@ -133,7 +163,7 @@ jobs:
           find . -name "librime.so" | xargs ls -l
           find . -name 'librime.so' -exec strip -x {} \;
 
-      # 7️⃣ 上传 artifact
+      # 8️⃣ 上传 artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -141,7 +171,7 @@ jobs:
           path: |
             fcitx5-plugins/build/macos-arm64/bin/librime.so
 
-      # 8️⃣ 上传到 GitHub Release (tag: latest)
+      # 9️⃣ 上传到 GitHub Release (tag: latest)
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
