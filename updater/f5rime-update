@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# 仓库 API URL
+API_URL="https://api.github.com/repos/mokapsing/f5m-rime-arm64-extra/releases/latest"
+#export https_proxy="http://127.0.0.1:7897"
+#export http_proxy="http://127.0.0.1:7897"
+#export all_proxy="socks5://127.0.0.1:7897"
+# 获取最新 release JSON
+echo "Fetching latest release info..."
+RELEASE_JSON=$(curl -s "$API_URL")
+
+# 提取 body 内容
+BODY=$(echo "$RELEASE_JSON" | jq -r '.body')
+
+# 从 body 中匹配 commit 哈希（40位十六进制）
+COMMIT_HASH=$(echo "$BODY" | grep -oE '[a-f0-9]{40}')
+
+if [ -z "$COMMIT_HASH" ]; then
+    echo "Warning: No commit hash found in release body."
+    COMMIT_HASH="unknown"
+else
+    echo "Commit hash extracted: $COMMIT_HASH"
+fi
+
+# 提取第一个资产的 browser_download_url
+DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[0].browser_download_url')
+
+# 检查是否找到 URL
+if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" == "null" ]; then
+    echo "Error: No browser_download_url found in the latest release."
+    exit 1
+fi
+
+# 设置下载文件名和目录
+ORIG_FILE_NAME=$(basename "$DOWNLOAD_URL")
+EXT="${ORIG_FILE_NAME##*.}"
+BASE="${ORIG_FILE_NAME%.*}"
+FILE_NAME="${BASE}_${COMMIT_HASH}.${EXT}"
+DEST_DIR="$HOME/Library/fcitx5/lib/fcitx5"
+LBRIME_COMMIT_FILE="$DEST_DIR/librime.so.commit"
+
+# 检查是否已经下载过相同的文件
+if [ -f "$LBRIME_COMMIT_FILE" ]; then
+    LAST_COMMIT=$(cat "$LBRIME_COMMIT_FILE")
+    if [ "$LAST_COMMIT" == "$COMMIT_HASH" ]; then
+        echo "The commit ID is the same as the last one. No need to download."
+        exit 0
+    fi
+else
+    echo "No commit file found. Proceeding with download."
+fi
+
+# 下载文件
+echo "Downloading $ORIG_FILE_NAME as $FILE_NAME to $DEST_DIR..."
+curl -L -o "$DEST_DIR/$FILE_NAME" "$DOWNLOAD_URL"
+
+# 检查下载是否成功
+if [ $? -ne 0 ]; then
+    echo "Download failed."
+    exit 1
+fi
+
+echo "Download completed successfully: $DEST_DIR/$FILE_NAME"
+
+# 检查文件是否有 com.apple.quarantine 属性
+if xattr -p com.apple.quarantine "$DEST_DIR/$FILE_NAME" &>/dev/null; then
+    echo "File has com.apple.quarantine attribute. Please enter your password to remove it."
+    sudo xattr -d com.apple.quarantine "$DEST_DIR/$FILE_NAME"
+    if [ $? -ne 0 ]; then
+        echo "Failed to remove quarantine attribute."
+        exit 1
+    fi
+fi
+
+# 重命名文件
+echo "Renaming file to librime.so..."
+mv -f "$DEST_DIR/$FILE_NAME" "$DEST_DIR/librime.so"
+
+# 更新 librime.so.commit 文件
+echo "$COMMIT_HASH" > "$LBRIME_COMMIT_FILE"
+
+echo "Update completed successfully with commit ID: $COMMIT_HASH"
