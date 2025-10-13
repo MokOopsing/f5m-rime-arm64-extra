@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           # 1️⃣ 获取 f5m-rime-arm64-extra latest release body
-          latest_body=$(curl -s https://api.github.com/repos/mokapsing/f5m-rime-arm64-extra/releases/latest | jq -r '.body')
+          latest_body=$(curl -s https://api.github.com/repos/MokOopsing/f5m-rime-arm64-extra/releases/latest | jq -r '.body')
           latest_commit=$(echo "$latest_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
 
           if [ -z "$latest_commit" ]; then
