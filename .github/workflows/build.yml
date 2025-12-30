@@ -99,6 +99,8 @@ jobs:
             ninja \
             go
           ./scripts/install-deps.sh macos arm64
+          wget -P cache/macos https://github.com/MokOopsing/librime-macos-prebuilder/releases/download/latest/librime-arm64.tar.bz2
+          tar xf cache/macos/librime-arm64.tar.bz2 -C build/macos-arm64/usr
           sudo tar xf cache/macos/marisa-arm64.tar.bz2 -C /usr/local bin/marisa-build # Make use of Rosetta
           pip install dirhash
 
