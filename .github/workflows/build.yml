@@ -82,9 +82,14 @@ jobs:
       - name: Get fcitx5-plugins commit id
         id: get-commit
         run: |
-          # 2️⃣ 获取 fcitx5-plugins 最新 commit id
+          set -x
+          # 2️⃣ 获取 librime-macos-prebuilder 最新 commit id
           latest_pb_body=$(curl -s https://api.github.com/repos/MokOopsing/librime-macos-prebuilder/releases/latest | jq -r '.body')
           latest_pb_commit=$(echo "$latest_pb_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
+          if [ -z "$latest_pb_commit" ]; then
+            latest_pb_commit="ba7094093e67557820c0d3750199ac52e1ee2c37"   #fake commit id
+          fi
+          echo "latest_pb_commit is $latest_pb_commit"
           echo "commit_id=${latest_pb_commit}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v6
@@ -160,11 +165,11 @@ jobs:
           GOARCH: arm64
         run: |
           ls -l patches
-          git apply --directory=libime patches/libime.patch
-          git apply --directory=fcitx5-jyutping patches/jyutping.patch
+          #git apply --directory=libime patches/libime.patch
+          #git apply --directory=fcitx5-jyutping patches/jyutping.patch
           git apply --directory=fcitx5-rime patches/rime.log.patch
-          git apply --directory=fcitx5-table-other patches/table-other.patch
-          git apply --directory=fcitx5-zhuyin patches/zhuyin.patch
+          #git apply --directory=fcitx5-table-other patches/table-other.patch
+          #git apply --directory=fcitx5-zhuyin patches/zhuyin.patch
           cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
           cmake --build build/macos-arm64
           #./scripts/install.sh macos arm64
