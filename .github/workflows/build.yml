@@ -81,8 +81,11 @@ jobs:
       # 2️⃣ 获取当前最新commit id
       - name: Get fcitx5-plugins commit id
         id: get-commit
-        working-directory: fcitx5-plugins
-        run: echo "commit_id=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          # 2️⃣ 获取 fcitx5-plugins 最新 commit id
+          latest_pb_body=$(curl -s https://api.github.com/repos/MokOopsing/librime-macos-prebuilder/releases/latest | jq -r '.body')
+          latest_pb_commit=$(echo "$latest_pb_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
+          echo "commit_id=${latest_pb_commit}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v6
         with:
@@ -135,6 +138,7 @@ jobs:
       # 6️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp（https://github.com/fcitx/fcitx5-rime/pull/113）
         working-directory: fcitx5-plugins
+        if: false
         run: |
           sed -i '' '/if (context.menu.num_candidates) {/c\
           \ \ \ \ \ \ \ \ if (!api->get_option(session, "_hide_candidate") && context.menu.num_candidates) {\
@@ -185,9 +189,8 @@ jobs:
           name: "macOS RIME Build"
           body: |
             This artifact was automatically built by GitHub Actions
-            from commit ${{ steps.get-commit.outputs.commit_id }} of [fcitx-contrib/fcitx5-plugins](https://github.com/fcitx-contrib/fcitx5-plugins).
-
-            It also includes changes from [fcitx5-rime PR #113](https://github.com/fcitx/fcitx5-rime/pull/113).
+            from [fcitx-contrib/fcitx5-plugins](https://github.com/fcitx-contrib/fcitx5-plugins).
+            with the commit ${{ steps.get-commit.outputs.commit_id }} of [rime/librime](https://github.com/rime/librime).
           files: |
             fcitx5-plugins/build/macos-arm64/bin/librime.so
         env:
