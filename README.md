@@ -11,7 +11,7 @@ Prebuilt **fcitx5-rime** plugin binaries for **[fcitx-contrib/fcitx5-macos](http
 
 ## Download
 
-Go to the [Releases](../../releases) page and download the package matching your system.
+Go to the [Releases](../../releases) page and download the so file.
 
 ## Notes
 
