@@ -6,7 +6,7 @@ Prebuilt **fcitx5-rime** plugin binaries for **[fcitx-contrib/fcitx5-macos](http
 
 - Automated build via GitHub Actions, triggered periodically  
 - Built from the latest commit of [fcitx-contrib/fcitx5-plugins](https://github.com/fcitx-contrib/fcitx5-plugins) **at the time of compilation**  
-- Includes additional patches from unmerged PRs to improve candidate display logic  
+- (maybe)Includes additional patches from unmerged PRs  
 - Release assets are stripped binaries for smaller size
 
 ## Download
