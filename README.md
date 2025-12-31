@@ -1,6 +1,6 @@
 # f5m-rime-arm64-extra
 
-Prebuilt **fcitx5-rime** plugin binaries for **[fcitx-contrib/fcitx5-macos](https://github.com/fcitx-contrib/fcitx5-macos) arm64**, including patches from unmerged PRs.
+Prebuilt **fcitx5-rime** plugin binaries for **[fcitx-contrib/fcitx5-macos](https://github.com/fcitx-contrib/fcitx5-macos) arm64**, (maybe)including patches from unmerged PRs.
 
 ## Features
 
