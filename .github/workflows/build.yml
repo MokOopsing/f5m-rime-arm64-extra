@@ -28,8 +28,13 @@ jobs:
           fi
 
           # 2️⃣ 获取 fcitx5-plugins 最新 commit id
-          latest_pb_body=$(curl -s https://api.github.com/repos/MokOopsing/librime-macos-prebuilder/releases/latest | jq -r '.body')
-          latest_pb_commit=$(echo "$latest_pb_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
+          pb_json=$(curl -s https://api.github.com/repos/MokOopsing/librime-macos-prebuilder/releases/latest)
+          pb_body=$(echo "$pb_json" | jq -r '.body')
+          latest_pb_commit=$(echo "$pb_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
+          
+          [ -z "$latest_pb_commit" ] && latest_pb_commit="ba7094093e67557820c0d3750199ac52e1ee2c37"
+
+          echo "latest_pb_commit=$latest_pb_commit" >> "$GITHUB_OUTPUT"
 
           echo "current release commit: $cur_release_commit"
           echo "Latest pbuilder commit: $latest_pb_commit"
