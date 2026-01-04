@@ -88,8 +88,9 @@ jobs:
       - name: Get fcitx5-plugins commit id
         id: get-commit
         run: |
-          echo "latest_pb_commit=${{ needs.check-latest-commit.outputs.latest_pb_commit }}"
-          echo "commit_id=${latest_pb_commit}" >> $GITHUB_OUTPUT
+          latest_pb_commit="${{ needs.check-latest-commit.outputs.latest_pb_commit }}"
+          echo "Using prebuilder commit: $latest_pb_commit"
+          echo "commit_id=$latest_pb_commit" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v6
         with:
