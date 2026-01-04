@@ -119,29 +119,63 @@ jobs:
           wget https://github.com/fcitx-contrib/fcitx5-macos/releases/download/latest/Fcitx5-arm64-dev.tar.bz2
           sudo tar xf Fcitx5-arm64-dev.tar.bz2 -C "/Library/Input Methods"
 
-      # 5️⃣ 修改 CMakeLists.txt，只启用 RIME
-      - name: Patch CMakeLists.txt (RIME only)
+      # 5️⃣ 自动生成 CMakePresets.json（只启用 RIME）
+      - name: Generate CMakePresets.json (RIME only)
         working-directory: fcitx5-plugins
-        #if: false   # 这个 step 永远不会执行
+        shell: bash
         run: |
-          sed -i '' \
-            -e 's/option(ANTHY .* ON)/option(ANTHY "" OFF)/' \
-            -e 's/option(BAMBOO .* ON)/option(BAMBOO "" OFF)/' \
-            -e 's/option(CHEWING .* ON)/option(CHEWING "" OFF)/' \
-            -e 's/option(CHINESE_ADDONS .* ON)/option(CHINESE_ADDONS "" OFF)/' \
-            -e 's/option(HALLELUJAH .* ON)/option(HALLELUJAH "" OFF)/' \
-            -e 's/option(HANGUL .* ON)/option(HANGUL "" OFF)/' \
-            -e 's/option(M17N .* ON)/option(M17N "" OFF)/' \
-            -e 's/option(MOZC .* ON)/option(MOZC "" OFF)/' \
-            -e 's/option(SAYURA .* ON)/option(SAYURA "" OFF)/' \
-            -e 's/option(SKK .* ON)/option(SKK "" OFF)/' \
-            -e 's/option(TABLE_EXTRA .* ON)/option(TABLE_EXTRA "" OFF)/' \
-            -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
-            -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
-            CMakeLists.txt
-            echo "=============CMakeLists.txt start================"
-            cat CMakeLists.txt
-            echo "=============CMakeLists.txt end================"
+          set -e
+
+          echo "Extracting CMake options..."
+
+          # 提取顶层 option 名称（假定均为大写）
+          options=$(grep -R "^[[:space:]]*option(" CMakeLists.txt \
+            | sed -E 's/.*option\(([A-Z0-9_]+).*/\1/' \
+            | sort -u)
+
+          echo "Detected options:"
+          echo "$options"
+
+          mkdir -p build-support
+
+          cat > CMakePresets.json << 'EOF'
+          {
+            "version": 6,
+            "configurePresets": [
+              {
+                "name": "ci-rime-only",
+                "generator": "Ninja",
+                "binaryDir": "build/macos-arm64",
+                "cacheVariables": {
+          EOF
+
+          first=1
+          for opt in $options; do
+            if [ "$opt" = "RIME" ]; then
+              val="ON"
+            else
+              val="OFF"
+            fi
+
+            if [ $first -eq 1 ]; then
+              first=0
+            else
+              echo "," >> CMakePresets.json
+            fi
+
+            echo "          \"$opt\": \"$val\"" >> CMakePresets.json
+          done
+
+          cat >> CMakePresets.json << 'EOF'
+                }
+              }
+            ]
+          }
+          EOF
+
+          echo "===== Generated CMakePresets.json ====="
+          cat CMakePresets.json
+
 
       # 6️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp（https://github.com/fcitx/fcitx5-rime/pull/113）
@@ -172,7 +206,11 @@ jobs:
           git apply --directory=fcitx5-rime patches/rime.log.patch
           #git apply --directory=fcitx5-table-other patches/table-other.patch
           #git apply --directory=fcitx5-zhuyin patches/zhuyin.patch
-          cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          #cmake -B build/macos-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --preset ci-rime-only \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64
+
           cmake --build build/macos-arm64
           #./scripts/install.sh macos arm64
           ls -l ./
