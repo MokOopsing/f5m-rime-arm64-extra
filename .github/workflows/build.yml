@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip_build: ${{ steps.check.outputs.skip_build }}
+      latest_pb_commit: ${{ steps.check.outputs.latest_pb_commit }}
     steps:
       - name: Check if build is needed
         id: check
@@ -82,15 +83,7 @@ jobs:
       - name: Get fcitx5-plugins commit id
         id: get-commit
         run: |
-          set -x
-          # 2️⃣ 获取 librime-macos-prebuilder 最新 commit id
-          latest_pb_json=$(curl -s https://api.github.com/repos/MokOopsing/librime-macos-prebuilder/releases/latest)
-          latest_pb_body=$(echo "$latest_pb_json" | jq -r '.body')
-          latest_pb_commit=$(echo "$latest_pb_body" | grep -Eo 'commit [0-9a-f]{7,40}' | awk '{print $2}')
-          if [ -z "$latest_pb_commit" ]; then
-            latest_pb_commit="ba7094093e67557820c0d3750199ac52e1ee2c37"   #fake commit id
-          fi
-          echo "latest_pb_commit is $latest_pb_commit"
+          echo "latest_pb_commit=${{ needs.check-latest-commit.outputs.latest_pb_commit }}"
           echo "commit_id=${latest_pb_commit}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-python@v6
