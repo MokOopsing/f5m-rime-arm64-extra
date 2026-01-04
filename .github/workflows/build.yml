@@ -139,6 +139,9 @@ jobs:
             -e 's/option(THAI .* ON)/option(THAI "" OFF)/' \
             -e 's/option(UNIKEY .* ON)/option(UNIKEY "" OFF)/' \
             CMakeLists.txt
+            echo "=============CMakeLists.txt start================"
+            cat CMakeLists.txt
+            echo "=============CMakeLists.txt end================"
 
       # 6️⃣ 修改 rimestate.cpp
       - name: Patch rimestate.cpp（https://github.com/fcitx/fcitx5-rime/pull/113）
