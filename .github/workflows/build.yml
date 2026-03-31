@@ -70,6 +70,55 @@ jobs:
           | jq -r '.[] | select(.name | endswith(".so")) | .id' \
           | xargs -r -I{} curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" "$api/releases/assets/{}"
 
+  update-release-when-skipped:
+    needs: check-latest-commit
+    if: needs.check-latest-commit.outputs.skip_build == 'true'
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Update release body (keep alive)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+  
+          repo="${{ github.repository }}"
+          api="https://api.github.com/repos/$repo"
+  
+          # 获取 latest release
+          release_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$api/releases/tags/latest")
+  
+          release_id=$(echo "$release_json" | jq -r .id)
+          old_body=$(echo "$release_json" | jq -r .body)
+  
+          if [ "$release_id" = "null" ]; then
+            echo "No release found, skipping."
+            exit 0
+          fi
+  
+          now=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+  
+          # 去掉旧的检查时间（防止无限增长）
+          cleaned_body=$(echo "$old_body" | sed '/Last check:/d')
+  
+          new_body=$(cat <<EOF
+          $cleaned_body
+          
+          ---
+          Last check: $now
+          Status: No new commits, build skipped.
+          EOF
+          )
+  
+          # 更新 release
+          curl -s -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg body "$new_body" '{body: $body}')" \
+            "$api/releases/$release_id"
+  
+          echo "Release body updated."
+
   build:
     needs: [check-latest-commit, clean-release-assets]
     if: needs.check-latest-commit.outputs.skip_build != 'true'
