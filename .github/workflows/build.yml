@@ -162,6 +162,10 @@ jobs:
           wget -P cache/macos https://github.com/MokOopsing/librime-macos-prebuilder/releases/download/latest/librime-arm64.tar.bz2
           wget -P cache/macos https://github.com/MokOopsing/librime-macos-prebuilder/releases/download/latest/lua-arm64.tar.bz2
           tar xf cache/macos/librime-arm64.tar.bz2 -C build/macos-arm64/usr
+          if [[ ! -f build/macos-arm64/usr/lib/libspdlog.a ]]; then
+            echo "librime artifact is missing libspdlog.a; rebuild the prebuilder release." >&2
+            exit 1
+          fi
           tar xf cache/macos/lua-arm64.tar.bz2 -C build/macos-arm64/usr
           sudo tar xf cache/macos/marisa-arm64.tar.bz2 -C /usr/local bin/marisa-build # Make use of Rosetta
           pip install dirhash
@@ -254,6 +258,27 @@ jobs:
           GOARCH: arm64
         run: |
           ls -l patches
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("CMakeLists.txt")
+          text = path.read_text()
+          start = text.index("set(Rime_dependencies\n")
+          end = text.index("\n)", start) + 2
+          block = text[start:end]
+
+          if '"-lspdlog"' not in block:
+              if block.count('"-lglog"') != 1:
+                  raise SystemExit("Could not find the expected glog link dependency")
+              block = block.replace('"-lglog"', '"-lspdlog"')
+          block = block.replace('    "-lqjs"\n', "")
+          if '"-lglog"' in block or '"-lqjs"' in block:
+              raise SystemExit("Obsolete glog/qjs link dependencies remain")
+          if '"-lspdlog"' not in block:
+              raise SystemExit("spdlog link dependency is missing")
+
+          path.write_text(text[:start] + block + text[end:])
+          PY
           #git apply --directory=libime patches/libime.patch
           #git apply --directory=fcitx5-jyutping patches/jyutping.patch
           git apply --directory=fcitx5-rime patches/rime.log.patch
